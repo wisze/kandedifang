@@ -41,7 +41,7 @@
 
 #include "Nokia_5110.h" // PCD8544 Controller
 // #include "sti_gnss_lib.h" // GNSS
-#include "GNSS.h" // GNSS
+// #include "GNSS.h" // GNSS
 #include "math.h" // fabs
 // #include "FatFileSystem.h"  // for SD card
 #include "Timer.h"
@@ -863,4 +863,3 @@ void task_called_after_GNSS_update(void) {
     bufCst[0] = (char)0;
   }
 }
-
