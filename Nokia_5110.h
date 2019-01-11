@@ -43,4 +43,3 @@ void pcd8544FractalPlot(void);
 #ifdef __cplusplus
 }
 #endif
-
