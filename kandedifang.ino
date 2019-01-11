@@ -1,3 +1,4 @@
+
 /**
  * Kandedifang viewer and logger
  * june 2015      custom screens (jun20a)
@@ -8,8 +9,8 @@
  * oktober 2015   started on waypoints, gpx file conversion
  * januari 2016   added waypoint struct and distance computation, 
  *                added waypoint screen, sorted by distance to current location
+ * februari 2016  rewrite to native SD methods (TBD)
  * may 2016       single simple satellite screen
- * june 2016      rewrite to native SD methods (TBD)
  *
  * Nokia LCD uses pins:
  * GPIO 3   LED
@@ -40,12 +41,11 @@
  */
 
 #include "Nokia_5110.h" // PCD8544 Controller
-// #include "sti_gnss_lib.h" // GNSS
-// #include "GNSS.h" // GNSS
+#include "sti_gnss_lib.h" // GNSS
 #include "math.h" // fabs
-// #include "FatFileSystem.h"  // for SD card
+#include "FatFileSystem.h"  // for SD card
 #include "Timer.h"
-#include "SD.h"
+// #include “SD.h”
 
 #define _CHECK_MARK 0xf0  // Check mark
 
@@ -102,9 +102,9 @@ int maxScreens = 3;
 /**
  * Folder and file names
  **/
-// FAT::FileSystem fatFsAgent;
-// FAT::File loc_file, cst_file, wp_file;
-SDClass SD;
+FAT::FileSystem fatFsAgent;
+FAT::File loc_file, cst_file, wp_file;
+// SDClass SD;
 // File loc_file, cst_file, wp_file;
 
 // FatFileSystem fatFsAgent;
@@ -181,7 +181,6 @@ uint16_t GlonassStat(char* str) {
     ip3d = round(100*nptsglo3d/npts);
   } 
   return sprintf(str, "%3d%% 3D %3d%%",ip2d,ip3d);
-  }
 }
 #endif
 
@@ -331,10 +330,10 @@ int nearestBeyond(double d) {
  * </wpt>
  */
 uint16_t read_waypoints(char* fn) { 
-  // if (FAT::File::exists(fn)) {
-  //   wp_file.open(fn, FA_READ | FA_OPEN_EXISTING);
-  if (SD.exist(fn)) {
-    File wp_file = SD.open(fn, FILE_READ);
+  if (FAT::File::exists(fn)) {
+    wp_file.open(fn, FA_READ | FA_OPEN_EXISTING);
+  // if (sd.exist(fn)) {
+    // wpfile - sd.open(fn, FILE_READ);
     len = sSize;
     do {
       len = wp_file.read(bufWp, len);
@@ -815,19 +814,17 @@ void task_called_after_GNSS_update(void) {
    * Write location buffer to file if 80% full
    **/
   if (strlen(bufLoc) > sSize * .8) {
-    // if (FAT::File::exists(fileLocName)) {
-    if (SD.exist(fileLocName)) {
-      // loc_file.open(fileLocName, FA_WRITE | FA_OPEN_EXISTING);
-      File loc_file = SD.open(fileLocName, FILE_WRITE);
-      // loc_file.lseek(loc_file.size());
-      loc_file.seek(loc_file.uint32size());
-      // loc_file.write((BYTE*)bufLoc, strlen(bufLoc));
-      loc_file.write((char*)bufLoc);
+    if (FAT::File::exists(fileLocName)) {
+    // if (sd.exist(fileLocName)) {
+      loc_file.open(fileLocName, FA_WRITE | FA_OPEN_EXISTING);
+      // loc_file = sd.open(fileLocName, FILE_WRITE);
+      loc_file.lseek(loc_file.size());
+      loc_file.write((BYTE*)bufLoc, strlen(bufLoc));
       loc_file.close();
     } else {
       // File does not exist, create a new one
-      // loc_file.open(fileLocName, FA_WRITE | FA_CREATE_NEW);
-      loc_file = SD.open(fileLocName, FILE_WRITE);
+      loc_file.open(fileLocName, FA_WRITE | FA_CREATE_NEW);
+      // loc_file = sd.open(fileLocName, FILE_WRITE);
       loc_file.write("date,time,lat,lon,alt,speed,course,hdop,vdop,pdop,");
       loc_file.write("gps_view,gps_used,beidou_view,beidou_used,");
       loc_file.write("glonass_view,glonass_used\n");
@@ -842,24 +839,19 @@ void task_called_after_GNSS_update(void) {
    * Write constellation buffer to file if 80% full
    **/
   if (strlen(bufCst) > sSize * .8) {
-    // if (FAT::File::exists(fileCstName)) {
-    if (SD.exists(fileCstName)) {
-      // cst_file.open(fileCstName, FA_WRITE | FA_OPEN_EXISTING);
-      File cst_file = SD.open(fileCstName, FILE_WRITE);
-      // cst_file.lseek(cst_file.size());
-      cst_file.seek(cst_file.uint32size());
-      // cst_file.write((BYTE*)bufCst, strlen(bufCst));
-      cst_file.write((char*)bufCst);
+    if (FAT::File::exists(fileCstName)) {
+      cst_file.open(fileCstName, FA_WRITE | FA_OPEN_EXISTING);
+      cst_file.lseek(cst_file.size());
+      cst_file.write((BYTE*)bufCst, strlen(bufCst));
       cst_file.close();
     } else {
       // File does not exist, create a new one
-      // cst_file.open(fileCstName, FA_WRITE | FA_CREATE_NEW);
-      File cst_file = SD.open(fileCstName, FILE_WRITE);
+      cst_file.open(fileCstName, FA_WRITE | FA_CREATE_NEW);
       cst_file.write("date,time,system,prn,cnr,elevation,azimuth\n");
-      // cst_file.write((BYTE*)bufCst, strlen(bufCst));
-      cst_file.write((char*)bufCst);
+      cst_file.write((BYTE*)bufCst, strlen(bufCst));
       cst_file.close();
     }
     bufCst[0] = (char)0;
   }
 }
+
